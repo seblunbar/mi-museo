@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<!--
+=====================================================================================
+   🏛️🎵  PLANTILLA: MUSEO 3D CON MODELOS GLB Y MÚSICA (Meta Quest y computadora)
+=====================================================================================
+
+   ¿QUÉ HACE ESTE PROGRAMA?
+   Crea un museo con 3 salas conectadas por puertas. Cada sala tiene 3 pedestales.
+   En cada pedestal aparece un modelo 3D (.glb) que se mueve y toca su propia
+   canción (.mp3). Entre más te acercas a una pieza, más fuerte la escuchas.
+
+   ⭐ LO ÚNICO QUE TIENES QUE HACER:
+   Poner tus archivos en estas carpetas, con EXACTAMENTE estos nombres.
+   No necesitas tocar el código: cada pieza ya está acomodada en su lugar.
+
+      mi-museo/
+      ├── index.html        (este archivo; cámbiale el nombre a index.html)
+      ├── modelos/          (carpeta con los 9 modelos 3D)
+      │   ├── sala1-pieza1.glb   sala1-pieza2.glb   sala1-pieza3.glb
+      │   ├── sala2-pieza1.glb   sala2-pieza2.glb   sala2-pieza3.glb
+      │   └── sala3-pieza1.glb   sala3-pieza2.glb   sala3-pieza3.glb
+      └── musica/           (carpeta con las 9 canciones)
+          ├── sala1-pieza1.mp3   sala1-pieza2.mp3   sala1-pieza3.mp3
+          ├── sala2-pieza1.mp3   sala2-pieza2.mp3   sala2-pieza3.mp3
+          └── sala3-pieza1.mp3   sala3-pieza2.mp3   sala3-pieza3.mp3
+
+   El modelo y la canción de una misma pieza se llaman IGUAL; solo cambian
+   la carpeta y la extensión. Ejemplo: la pieza 3 de la sala 2 usa
+        modelos/sala2-pieza3.glb   y   musica/sala2-pieza3.mp3
+
+   ✅ LISTA DE ARCHIVOS (cada pieza necesita su .glb y su .mp3):
+      SALA 1                        SALA 2                        SALA 3
+      [ ] sala1-pieza1 (fondo)      [ ] sala2-pieza1 (fondo)      [ ] sala3-pieza1 (fondo)
+      [ ] sala1-pieza2 (izquierda)  [ ] sala2-pieza2 (izquierda)  [ ] sala3-pieza2 (izquierda)
+      [ ] sala1-pieza3 (derecha)    [ ] sala2-pieza3 (derecha)    [ ] sala3-pieza3 (derecha)
+
+   ¿Y SI ME FALTA UN ARCHIVO?
+   No pasa nada. Si falta el .glb, aparece una cajita gris con el aviso
+   "Falta modelo" y el nombre del archivo. Si falta el .mp3, esa pieza
+   simplemente no suena. El resto del museo sigue funcionando.
+
+   ¿MI MODELO ES GIGANTE O DIMINUTO?
+   Tampoco importa. El código lo ajusta solo para que quepa en el pedestal.
+   Si lo quieres más grande o más chico, cambia la opción "tamano" de esa pieza.
+
+   ¿QUÉ PARTES PUEDO CAMBIAR SIN MIEDO?
+   Busca el símbolo ✏️ en este archivo. Ahí están las partes pensadas para
+   personalizar: nombres, tamaños y movimientos de las piezas, y nombres y
+   colores de las salas. Lo demás es el "motor" del museo: léelo para
+   aprender, pero si lo cambias sin saber qué hace, algo puede dejar de funcionar.
+
+   ¿POR QUÉ ALGUNAS PALABRAS NO LLEVAN ACENTO NI Ñ?
+   • En el código (por ejemplo "tamano"), porque los nombres de las opciones
+     no pueden llevar ñ ni acentos.
+   • En los textos que se ven dentro del museo (títulos y etiquetas), porque
+     la letra 3D de A-Frame no dibuja acentos ni ñ. Escribe "Pinguino", no "Pingüino".
+
+   REGLAS PARA LOS ARCHIVOS:
+   • Nombres sin espacios, sin acentos, sin ñ y en minúsculas.
+   • Canciones cortas: de 30 a 60 segundos, en formato mp3.
+   • Modelos ligeros: de preferencia menos de 5 MB cada uno.
+     (El Quest carga todo en su memoria; si los archivos pesan mucho, se pone lento.)
+
+   ¿CÓMO PROBARLO?
+   Sube la carpeta completa a Vercel (o a cualquier hosting con https).
+   Abrir el HTML con doble clic NO funciona: el navegador bloquea los .glb
+   y los .mp3 cuando no hay un servidor.
+
+   ESTRUCTURA DEL CÓDIGO (las 6 capas de toda escena A-Frame):
+     CAPA 1: Librerías     (los programas que usamos; se cargan de internet)
+     CAPA 2: El mundo      (<a-scene>, la caja donde vive todo)
+     CAPA 3: El jugador    (tu cabeza, tus manos y los controles del Quest)
+     CAPA 4: Las salas     (paredes, piezas, música y botones)
+     CAPA 5: Luces
+     CAPA 6: Entorno       (el cielo)
+   Además hay COMPONENTES PROPIOS: herramientas que programamos nosotros
+   y que se explican una por una más abajo.
+=====================================================================================
+-->
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Museo 3D</title>
+  <!-- Hace que la página se vea bien en celulares y en el Quest -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+  <!-- ================================================================
+       CAPA 1: LIBRERÍAS
+       ================================================================ -->
+
+  <!-- A-Frame: el motor para crear mundos 3D, VR y AR con etiquetas HTML -->
+  <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
+
+  <!-- A-Frame Extras: trae "animation-mixer", que reproduce las animaciones
+       que vienen DENTRO de un modelo .glb (por ejemplo, un pájaro aleteando) -->
+  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@7.5.4/dist/aframe-extras.min.js"></script>
+
+  <!-- Estilos (colores y letras) solo para la pantalla de bienvenida -->
+  <style>
+    #portada {
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: #1c1b33; color: #f3ecdc;
+      font-family: Georgia, serif; text-align: center; padding: 24px;
+    }
+    #portada h1 { font-size: 2.2rem; margin: 0 0 12px; }
+    #portada p  { max-width: 32em; line-height: 1.6; margin: 0 0 16px; }
+    #portada ul { text-align: left; line-height: 1.8; margin: 0 0 24px; }
+    #entrar {
+      font-size: 1.2rem; padding: 14px 32px; border: none; border-radius: 40px;
+      background: #f2b134; color: #1c1b33; cursor: pointer; font-family: inherit;
+    }
+  </style>
+
+  <script>
+    /* =====================================================================
+       COMPONENTES PROPIOS
+       =====================================================================
+       Un "componente" es una herramienta que le agregamos a A-Frame.
+       Se crea con  AFRAME.registerComponent('nombre', { ... })
+       y después se usa como atributo en una etiqueta, por ejemplo:
+            <a-entity pieza="..."></a-entity>
+
+       Tienen que ir ANTES de <a-scene>; por eso están aquí, en el <head>.
+
+         1) pieza             pedestal + modelo GLB + etiqueta + música
+         2) sala              piso, paredes, puertas y título
+         3) boton-sala        botón para teletransportarte a otra sala
+         4) caminar-joystick  caminar con el joystick izquierdo del Quest
+         5) girar-joystick    girar con el joystick derecho del Quest
+
+       Palabras que vas a ver en todos los componentes:
+         schema   = la lista de opciones que se pueden escribir en el HTML.
+                    "default" es el valor que se usa si no escribes esa opción.
+         init()   = se ejecuta UNA sola vez, cuando el objeto aparece en la escena.
+         this.el  = la etiqueta HTML que tiene puesto el componente.
+         this.data = las opciones que escribiste en el HTML.
+       ===================================================================== */
+
+
+    /* ---------------------------------------------------------------------
+       COMPONENTE 1: "pieza"   ⭐ el más importante de la plantilla
+       Con UNA sola línea en el HTML crea todo esto:
+         • un pedestal
+         • una etiqueta con el nombre de la pieza
+         • el modelo 3D (.glb), ajustado automáticamente al tamaño correcto
+         • su movimiento (girar, flotar, latir o quieto)
+         • su canción, que suena más fuerte al acercarte
+
+       Ejemplo de uso:
+         <a-entity position="0 0 -5.5"
+                   pieza="nombre: Mi dragon;
+                          modelo: modelos/sala1-pieza1.glb;
+                          cancion: musica/sala1-pieza1.mp3;
+                          movimiento: girar"></a-entity>
+       --------------------------------------------------------------------- */
+    AFRAME.registerComponent('pieza', {
+
+      schema: {
+        nombre:        { default: 'Pieza' },     // texto del pedestal (SIN acentos ni ñ)
+        modelo:        { default: '' },          // ruta del archivo .glb
+        cancion:       { default: '' },          // ruta del archivo .mp3
+        tamano:        { default: 1 },           // medida del lado más largo del modelo, en metros
+        movimiento:    { default: 'girar',       // cómo se mueve el modelo
+                         oneOf: ['girar', 'flotar', 'latir', 'quieto'] },
+        alcance:       { default: 4 },           // metros a los que ya no se oye la canción
+        volumen:       { default: 1 },           // 0 = mudo, 1 = normal, 2 = el doble
+        colorPedestal: { default: '#d9cfb8' },
+        colorTexto:    { default: '#2b2a3d' }
+      },
+
+      init() {
+        const d = this.data;
+
+        // ---- 1. PEDESTAL: un cilindro de 0.9 m de alto ----
+        const pedestal = document.createElement('a-cylinder');
+        pedestal.setAttribute('radius', 0.6);
+        pedestal.setAttribute('height', 0.9);
+        pedestal.setAttribute('position', '0 0.45 0');   // la mitad de su altura, para que toque el piso
+        pedestal.setAttribute('color', d.colorPedestal);
+        this.el.appendChild(pedestal);
+
+        // ---- 2. ETIQUETA en el frente del pedestal ----
+        const etiqueta = document.createElement('a-text');
+        etiqueta.setAttribute('value', d.nombre);
+        etiqueta.setAttribute('position', '0 0.6 0.62');  // 0.62 = justo afuera del cilindro
+        etiqueta.setAttribute('align', 'center');
+        etiqueta.setAttribute('width', 3);
+        etiqueta.setAttribute('color', d.colorTexto);
+        this.el.appendChild(etiqueta);
+
+        // ---- 3. MODELO 3D, parado encima del pedestal (a 0.95 m del piso) ----
+        const modelo = document.createElement('a-entity');
+        this.modelo = modelo;   // lo guardamos para usarlo después en otras funciones
+        modelo.setAttribute('position', '0 0.95 0');
+        // url(...) es la forma en que A-Frame recibe la ruta de un archivo
+        modelo.setAttribute('gltf-model', `url(${d.modelo})`);
+        // Reproduce las animaciones que traiga el .glb (si no trae, no pasa nada)
+        modelo.setAttribute('animation-mixer', '');
+
+        // Cuando el modelo termina de cargar, lo ajustamos al tamaño correcto
+        modelo.addEventListener('model-loaded', () => this.ajustarTamano());
+        // Si el archivo no existe o está dañado, mostramos un aviso
+        modelo.addEventListener('model-error', () => this.mostrarAviso());
+
+        // ---- 4. MOVIMIENTO ----
+        // Usamos el componente "animation" que ya trae A-Frame:
+        //   property = qué cambia (rotation = giro, position = lugar, scale = tamaño)
+        //   to       = a qué valor llega
+        //   dur      = cuánto tarda, en milisegundos (1000 = 1 segundo)
+        //   dir: alternate = va y regresa        loop: true = se repite para siempre
+        //   easing   = el ritmo del movimiento (linear = parejo, easeInOutSine = suave)
+        if (d.movimiento === 'girar') {
+          modelo.setAttribute('animation', 'property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear');
+        } else if (d.movimiento === 'flotar') {
+          modelo.setAttribute('animation', 'property: position; to: 0 1.35 0; dir: alternate; loop: true; dur: 2000; easing: easeInOutSine');
+        } else if (d.movimiento === 'latir') {
+          modelo.setAttribute('animation', 'property: scale; to: 1.15 1.15 1.15; dir: alternate; loop: true; dur: 700; easing: easeInOutSine');
+        }
+        // "quieto" = no le ponemos animación
+
+        // ---- 5. MÚSICA 3D (componente "sound" que ya trae A-Frame) ----
+        //   loop: true            = la canción se repite sin parar
+        //   positional: true      = el sonido sale DESDE la pieza (sonido 3D)
+        //   distanceModel: linear = el volumen baja parejo conforme te alejas
+        //   refDistance: 1        = a 1 metro o menos suena al máximo
+        //   maxDistance           = a esa distancia ya no se oye nada
+        if (d.cancion) {
+          modelo.setAttribute('sound', {
+            src: `url(${d.cancion})`,
+            loop: true,
+            positional: true,
+            distanceModel: 'linear',
+            refDistance: 1,
+            maxDistance: d.alcance,
+            volume: d.volumen
+          });
+        }
+
+        this.el.appendChild(modelo);
+      },
+
+      // Escala el modelo para que su lado más largo mida "tamano" metros,
+      // lo centra y lo apoya justo encima del pedestal.
+      ajustarTamano() {
+        const malla = this.modelo.getObject3D('mesh');   // la figura 3D ya cargada
+        if (!malla) return;
+
+        // La sacamos un momento de la escena para medirla sin que le afecte nada más
+        const padre = malla.parent;
+        padre.remove(malla);
+        malla.position.set(0, 0, 0);
+        malla.scale.set(1, 1, 1);
+        malla.updateMatrixWorld(true);
+
+        // Medimos la "caja" invisible que envuelve al modelo
+        const caja = new THREE.Box3().setFromObject(malla);
+        const medida = new THREE.Vector3();
+        const centro = new THREE.Vector3();
+        caja.getSize(medida);
+        caja.getCenter(centro);
+
+        // Escala = tamaño que queremos ÷ lado más largo del modelo
+        const ladoMayor = Math.max(medida.x, medida.y, medida.z) || 1;
+        const escala = this.data.tamano / ladoMayor;
+        malla.scale.setScalar(escala);
+
+        // La centramos a los lados y apoyamos su base sobre el pedestal
+        malla.position.set(-centro.x * escala, -caja.min.y * escala, -centro.z * escala);
+
+        padre.add(malla);   // la regresamos a la escena
+      },
+
+      // Si falta el .glb: una cajita gris y un aviso rojo con el archivo que falta
+      mostrarAviso() {
+        const caja = document.createElement('a-box');
+        caja.setAttribute('position', '0 0.25 0');
+        caja.setAttribute('scale', '0.5 0.5 0.5');
+        caja.setAttribute('color', '#888888');
+        this.modelo.appendChild(caja);
+
+        const aviso = document.createElement('a-text');
+        aviso.setAttribute('value', 'Falta modelo:\n' + this.data.modelo);
+        aviso.setAttribute('position', '0 0.8 0');
+        aviso.setAttribute('align', 'center');
+        aviso.setAttribute('width', 2.5);
+        aviso.setAttribute('color', '#e2453c');
+        this.modelo.appendChild(aviso);
+      },
+
+      // Da "play" a la canción. Se llama al presionar "Entrar al museo".
+      tocar() {
+        const sonido = this.modelo.components.sound;
+        // Si la canción todavía no termina de cargar, A-Frame la toca en cuanto esté lista
+        if (sonido) sonido.playSound();
+      }
+    });
+
+
+    /* ---------------------------------------------------------------------
+       COMPONENTE 2: "sala"
+       Construye el piso, las 4 paredes (con puertas a los lados) y el título.
+       Todo lo que pongas DENTRO de la sala se mide desde su centro:
+       "0 0 0" es el centro del piso de esa sala.
+       --------------------------------------------------------------------- */
+    AFRAME.registerComponent('sala', {
+      schema: {
+        nombre:     { default: 'Sala' },      // título en la pared (SIN acentos ni ñ)
+        colorPiso:  { default: '#3b3a4f' },
+        colorPared: { default: '#efe6d2' },
+        colorTexto: { default: '#2b2a3d' },
+        tamano:     { default: 16 },          // metros de ancho y de fondo
+        alto:       { default: 5 },           // altura de las paredes, en metros
+        puertaIzq:  { default: true },        // ¿lleva puerta la pared izquierda?
+        puertaDer:  { default: true }         // ¿lleva puerta la pared derecha?
+      },
+
+      init() {
+        const d = this.data;
+        const m = d.tamano / 2;   // distancia del centro a cada pared
+
+        // Piso: un plano "acostado" (girado -90° en X)
+        this.crear('a-plane', { rotation: '-90 0 0', width: d.tamano, height: d.tamano, color: d.colorPiso });
+        // Pared del fondo (la que ves al entrar) y pared de atrás
+        this.crear('a-box', { position: `0 ${d.alto/2} ${-m + 0.1}`, width: d.tamano, height: d.alto, depth: 0.2, color: d.colorPared });
+        this.crear('a-box', { position: `0 ${d.alto/2} ${m - 0.1}`,  width: d.tamano, height: d.alto, depth: 0.2, color: d.colorPared });
+        // Paredes de los lados
+        this.paredLateral(-m + 0.1, d.puertaIzq);
+        this.paredLateral( m - 0.1, d.puertaDer);
+        // Título en la pared del fondo
+        this.crear('a-text', { value: d.nombre, position: `0 ${d.alto - 0.8} ${-m + 0.25}`,
+                               align: 'center', width: 14, color: d.colorTexto });
+      },
+
+      // Pared de un lado: completa, o partida en 2 pedazos con un hueco de 3 m (la puerta)
+      paredLateral(x, conPuerta) {
+        const d = this.data, hueco = 3;
+        if (!conPuerta) {
+          this.crear('a-box', { position: `${x} ${d.alto/2} 0`, width: 0.2, height: d.alto, depth: d.tamano, color: d.colorPared });
+          return;
+        }
+        const tramo = (d.tamano - hueco) / 2;   // largo de cada pedazo de pared
+        const z = hueco / 2 + tramo / 2;          // dónde queda el centro de cada pedazo
+        this.crear('a-box', { position: `${x} ${d.alto/2} ${-z}`, width: 0.2, height: d.alto, depth: tramo, color: d.colorPared });
+        this.crear('a-box', { position: `${x} ${d.alto/2} ${z}`,  width: 0.2, height: d.alto, depth: tramo, color: d.colorPared });
+        // Dintel: el pedazo de pared que queda arriba de la puerta
+        this.crear('a-box', { position: `${x} ${d.alto - 0.5} 0`, width: 0.2, height: 1, depth: hueco, color: d.colorPared });
+      },
+
+      // Ayudante: crea una etiqueta (a-box, a-text...) con sus atributos y la mete en la sala
+      crear(etiqueta, atributos) {
+        const e = document.createElement(etiqueta);
+        for (const k in atributos) e.setAttribute(k, atributos[k]);
+        this.el.appendChild(e);
+        return e;
+      }
+    });
+
+
+    /* ---------------------------------------------------------------------
+       COMPONENTE 3: "boton-sala" (TELETRANSPORTE)
+       Apunta al botón con el láser del control y aprieta el GATILLO
+       (o dale clic con el mouse) para viajar a otra sala.
+
+       "destino" es una posición del MUNDO (no de la sala). Regla fácil:
+            destino = "centroX 0 5"   →  Sala 1: 0 0 5,  Sala 2: 16 0 5,  Sala 3: 32 0 5
+       --------------------------------------------------------------------- */
+    AFRAME.registerComponent('boton-sala', {
+      schema: {
+        texto:   { default: 'Ir' },     // lo que dice el botón (SIN acentos ni ñ)
+        destino: { type: 'vec3' }       // vec3 = tres números: X Y Z
+      },
+      init() {
+        const el = this.el;
+        // "clickable" es la clase que buscan los láseres. Sin ella, el láser ignora el objeto.
+        el.classList.add('clickable');
+        el.setAttribute('geometry', 'primitive: plane; width: 1.5; height: 0.4');
+        el.setAttribute('material', 'color: #f2b134; shader: flat');
+
+        // Texto del botón, un poquito adelante (0.01) para que no quede escondido
+        const t = document.createElement('a-text');
+        t.setAttribute('value', this.data.texto);
+        t.setAttribute('align', 'center');
+        t.setAttribute('width', 3);
+        t.setAttribute('color', '#1c1b33');
+        t.setAttribute('position', '0 0 0.01');
+        el.appendChild(t);
+
+        // EVENTOS (cosas que pasan cuando el usuario hace algo):
+        //   mouseenter = el láser o el mouse apunta al botón  → se ilumina
+        //   mouseleave = deja de apuntarle                     → regresa a su color
+        //   click      = aprietas el gatillo o das clic        → te teletransporta
+        el.addEventListener('mouseenter', () => el.setAttribute('material', 'color', '#ffd57a'));
+        el.addEventListener('mouseleave', () => el.setAttribute('material', 'color', '#f2b134'));
+        el.addEventListener('click', () => {
+          const d = this.data.destino;
+          // Movemos el "rig" (el contenedor del jugador) al destino
+          document.querySelector('#rig').object3D.position.set(d.x, d.y, d.z);
+        });
+      }
+    });
+
+
+    /* ---------------------------------------------------------------------
+       COMPONENTE 4: "caminar-joystick"
+       Caminar con el JOYSTICK IZQUIERDO, hacia donde estás mirando.
+       --------------------------------------------------------------------- */
+    AFRAME.registerComponent('caminar-joystick', {
+      schema: { velocidad: { default: 2.5 } },   // metros por segundo
+      init() {
+        this.x = 0;   // joystick a los lados: -1 = izquierda, 1 = derecha
+        this.y = 0;   // joystick adelante/atrás: -1 = adelante, 1 = atrás
+        this.frente = new THREE.Vector3();    // flecha "hacia donde miro"
+        this.derecha = new THREE.Vector3();   // flecha "hacia mi derecha"
+        // El Quest avisa con el evento "thumbstickmoved" cada vez que mueves el joystick
+        this.el.addEventListener('thumbstickmoved', e => { this.x = e.detail.x; this.y = e.detail.y; });
+      },
+      // tick() se ejecuta en cada cuadro de video (de 72 a 90 veces por segundo en el Quest).
+      // dt = milisegundos que pasaron desde el cuadro anterior.
+      tick(tiempo, dt) {
+        // Zona muerta: si casi no tocas el joystick, no nos movemos
+        if (Math.abs(this.x) < 0.15 && Math.abs(this.y) < 0.15) return;
+        const rig = document.querySelector('#rig').object3D;
+        // Hacia dónde mira tu cabeza, sin contar si miras hacia arriba o abajo
+        this.el.sceneEl.camera.getWorldDirection(this.frente);
+        this.frente.y = 0;
+        this.frente.normalize();
+        this.derecha.set(-this.frente.z, 0, this.frente.x);
+        const paso = this.data.velocidad * dt / 1000;               // cuánto avanzar en este cuadro
+        rig.position.addScaledVector(this.frente, -this.y * paso);  // adelante / atrás
+        rig.position.addScaledVector(this.derecha, this.x * paso);  // a los lados
+      }
+    });
+
+
+    /* ---------------------------------------------------------------------
+       COMPONENTE 5: "girar-joystick"
+       Girar de golpe con el JOYSTICK DERECHO (izquierda o derecha).
+       Sirve para darte la vuelta sin girar el cuerpo (útil si estás sentado).
+       Girar "de golpe" marea menos que un giro lento y continuo.
+       --------------------------------------------------------------------- */
+    AFRAME.registerComponent('girar-joystick', {
+      schema: { grados: { default: 45 } },   // cuánto giras cada vez
+      init() {
+        this.listo = true;   // evita girar muchas veces con un solo empujón
+        this.el.addEventListener('thumbstickmoved', e => {
+          const x = e.detail.x;
+          // Empujón fuerte hacia un lado: giramos una vez
+          if (this.listo && Math.abs(x) > 0.7) {
+            document.querySelector('#rig').object3D.rotation.y -= Math.sign(x) * this.data.grados * Math.PI / 180;
+            this.listo = false;
+          }
+          // Soltaste el joystick (regresó al centro): ya puedes volver a girar
+          if (Math.abs(x) < 0.3) this.listo = true;
+        });
+      }
+    });
+  </script>
+</head>
+<body>
+
+<!-- =====================================================================
+     PANTALLA DE BIENVENIDA
+     Los navegadores no dejan que suene música hasta que el usuario hace clic.
+     Por eso esta portada tiene el botón "Entrar al museo".
+     ===================================================================== -->
+<div id="portada">
+  <h1>🏛️ Museo 3D</h1>
+  <p>Cada pieza toca su propia canción. Acércate para escucharla más fuerte.
+     Usa audífonos para sentir de qué lado viene el sonido.</p>
+  <ul>
+    <li>🕹️ Joystick izquierdo: caminar</li>
+    <li>🔄 Joystick derecho: girar</li>
+    <li>🎯 Gatillo sobre un botón amarillo: cambiar de sala</li>
+    <li>💻 En computadora: teclas W A S D y el mouse</li>
+  </ul>
+  <button id="entrar">Entrar al museo 🎧</button>
+</div>
+
+
+<!-- ================================================================
+     CAPA 2: EL MUNDO
+       xr-mode-ui="XRMode: xr"          muestra los botones de VR y AR en el Quest
+       cursor="rayOrigin: mouse"        permite dar clic con el mouse en la compu
+       raycaster="objects: .clickable"  el mouse solo puede tocar los botones
+     ================================================================ -->
+<a-scene xr-mode-ui="XRMode: xr" cursor="rayOrigin: mouse" raycaster="objects: .clickable">
+
+
+  <!-- ================================================================
+       CAPA 3: EL JUGADOR (el "rig")
+       El rig es una caja invisible que contiene tu cabeza (la cámara) y
+       tus dos manos (los controles). Cuando caminas o te teletransportas,
+       se mueve el rig completo y todo viaja contigo.
+       position="0 0 5" = apareces en la entrada de la Sala 1.
+
+       CONTROLES DEL META QUEST
+       ┌───────────────────────┬────────────────────────────────────────┐
+       │ Joystick IZQUIERDO    │ Caminar hacia donde miras               │
+       │ Joystick DERECHO      │ Girar 45° a la izquierda o a la derecha │
+       │ Láser de cada mano    │ Apuntar a los botones amarillos         │
+       │ GATILLO (dedo índice) │ Dar clic en el botón al que apuntas     │
+       │ Botón Meta (∞)        │ Abrir el menú del Quest para salir      │
+       └───────────────────────┴────────────────────────────────────────┘
+       En computadora: W A S D para caminar; el mouse para mirar y dar clic.
+       ================================================================ -->
+  <a-entity id="rig" position="0 0 5">
+
+    <!-- CABEZA: la cámara a 1.6 m del piso (altura de los ojos).
+         look-controls = mirar alrededor (con el visor o arrastrando el mouse)
+         wasd-controls = caminar con el teclado en la computadora -->
+    <a-entity camera position="0 1.6 0" look-controls wasd-controls="acceleration: 25"></a-entity>
+
+    <!-- MANO IZQUIERDA:
+         laser-controls   = reconoce el control del Quest y dibuja un láser
+         raycaster        = el láser solo toca objetos "clickable", hasta 20 m
+         caminar-joystick = nuestro componente para caminar (Componente 4) -->
+    <a-entity laser-controls="hand: left"  raycaster="objects: .clickable; far: 20" caminar-joystick="velocidad: 2.5"></a-entity>
+
+    <!-- MANO DERECHA: igual, pero con nuestro componente para girar (Componente 5) -->
+    <a-entity laser-controls="hand: right" raycaster="objects: .clickable; far: 20" girar-joystick="grados: 45"></a-entity>
+  </a-entity>
+
+
+  <!-- ================================================================
+       CAPA 4: LAS SALAS
+       ================================================================
+       Las salas van en fila, una cada 16 metros en X:
+
+          ┌──────────┬──────────┬──────────┐
+          │  Sala 1  ⇆  Sala 2  ⇆  Sala 3  │      ⇆ = puertas
+          └──────────┴──────────┴──────────┘
+             X = 0     X = 16     X = 32
+
+       ACOMODO DE LAS 3 PIEZAS EN CADA SALA (vista desde arriba):
+
+                 pared del fondo (título)
+          ┌──────────────────────────────┐
+          │             [1]              │    1 = pieza principal (más grande)
+          │                              │
+          │   [2]                  [3]   │
+        puerta                        puerta
+          │                              │
+          │           botones            │
+          │           TÚ aquí            │
+          └──────────────────────────────┘
+
+       Las piezas están a más de 6 metros entre sí, para que sus
+       canciones no se encimen.
+
+       La "position" de cada pieza se mide desde el CENTRO DE SU SALA,
+       no desde el centro del mundo. Por eso las 3 salas repiten las mismas posiciones.
+
+       ✏️ OPCIONES DE CADA PIEZA (solo "modelo" y "cancion" son obligatorias):
+         nombre      texto del pedestal (SIN acentos ni ñ)
+         modelo      archivo .glb
+         cancion     archivo .mp3
+         tamano      medida del modelo en metros (1 = normal, 1.8 = grande)
+         movimiento  girar | flotar | latir | quieto
+         alcance     metros hasta donde se oye la canción (4 = normal)
+         volumen     1 = normal, 0.5 = la mitad, 2 = el doble
+       Las opciones se separan con punto y coma ( ; ).
+       ================================================================ -->
+
+
+  <!-- ░░░░░░░░░░░░░░░░░░ SALA 1   (centro en X = 0) ░░░░░░░░░░░░░░░░░░
+       ✏️ En la línea de abajo puedes cambiar el nombre y los colores de la sala.
+       puertaIzq: false, porque a la izquierda ya no hay más salas. -->
+  <a-entity sala="nombre: Sala 1; puertaIzq: false" position="0 0 0">
+
+    <!-- Letrero con instrucciones (solo en la primera sala).
+         \n dentro del texto significa "salto de línea". -->
+    <a-plane position="0 2.4 3" width="3.4" height="0.9" color="#1c1b33"></a-plane>
+    <a-text value="Joystick izq: caminar   |   Joystick der: girar\nApunta a un boton amarillo y aprieta el gatillo"
+            position="0 2.4 3.01" align="center" width="3.2" color="#f3ecdc"></a-text>
+
+    <!-- Botones de teletransporte a las otras salas -->
+    <a-entity boton-sala="texto: Ir a Sala 2; destino: 16 0 5" position="-0.9 1.3 3"></a-entity>
+    <a-entity boton-sala="texto: Ir a Sala 3; destino: 32 0 5" position="0.9 1.3 3"></a-entity>
+
+    <!-- ✏️ Pieza 1: la principal, al fondo al centro (más grande y se oye desde más lejos) -->
+    <a-entity position="0 0 -5.5"
+      pieza="nombre: Pieza 1; modelo: modelos/sala1-pieza1.glb; cancion: musica/sala1-pieza1.mp3; tamano: 1.8; movimiento: girar; alcance: 5"></a-entity>
+    <!-- ✏️ Pieza 2: lado izquierdo -->
+    <a-entity position="-5 0 -1"
+      pieza="nombre: Pieza 2; modelo: modelos/sala1-pieza2.glb; cancion: musica/sala1-pieza2.mp3; movimiento: flotar"></a-entity>
+    <!-- ✏️ Pieza 3: lado derecho -->
+    <a-entity position="5 0 -1"
+      pieza="nombre: Pieza 3; modelo: modelos/sala1-pieza3.glb; cancion: musica/sala1-pieza3.mp3; movimiento: latir"></a-entity>
+  </a-entity>
+
+
+  <!-- ░░░░░░░░░░░░░░░░░░ SALA 2   (centro en X = 16) ░░░░░░░░░░░░░░░░░░
+       ✏️ Nombre y colores de la sala en la línea de abajo.
+       Tiene puertas a los dos lados porque está en medio. -->
+  <a-entity sala="nombre: Sala 2; colorPiso: #4a2c2a; colorPared: #f4d9b0" position="16 0 0">
+
+    <a-entity boton-sala="texto: Ir a Sala 1; destino: 0 0 5"  position="-0.9 1.3 3"></a-entity>
+    <a-entity boton-sala="texto: Ir a Sala 3; destino: 32 0 5" position="0.9 1.3 3"></a-entity>
+
+    <!-- ✏️ Pieza 1: la principal, al fondo al centro -->
+    <a-entity position="0 0 -5.5"
+      pieza="nombre: Pieza 1; modelo: modelos/sala2-pieza1.glb; cancion: musica/sala2-pieza1.mp3; tamano: 1.8; movimiento: girar; alcance: 5; colorPedestal: #c9a36a"></a-entity>
+    <!-- ✏️ Pieza 2: lado izquierdo -->
+    <a-entity position="-5 0 -1"
+      pieza="nombre: Pieza 2; modelo: modelos/sala2-pieza2.glb; cancion: musica/sala2-pieza2.mp3; movimiento: girar; colorPedestal: #c9a36a"></a-entity>
+    <!-- ✏️ Pieza 3: lado derecho -->
+    <a-entity position="5 0 -1"
+      pieza="nombre: Pieza 3; modelo: modelos/sala2-pieza3.glb; cancion: musica/sala2-pieza3.mp3; movimiento: flotar; colorPedestal: #c9a36a"></a-entity>
+  </a-entity>
+
+
+  <!-- ░░░░░░░░░░░░░░░░░░ SALA 3   (centro en X = 32) ░░░░░░░░░░░░░░░░░░
+       ✏️ Nombre y colores de la sala en la línea de abajo.
+       puertaDer: false, porque es la última sala.
+       (Si agregas una Sala 4, cámbialo a puertaDer: true) -->
+  <a-entity sala="nombre: Sala 3; colorPiso: #111a33; colorPared: #25305a; colorTexto: #f3ecdc; puertaDer: false"
+            position="32 0 0">
+
+    <a-entity boton-sala="texto: Ir a Sala 1; destino: 0 0 5"  position="-0.9 1.3 3"></a-entity>
+    <a-entity boton-sala="texto: Ir a Sala 2; destino: 16 0 5" position="0.9 1.3 3"></a-entity>
+
+    <!-- ✏️ Pieza 1: la principal, al fondo al centro -->
+    <a-entity position="0 0 -5.5"
+      pieza="nombre: Pieza 1; modelo: modelos/sala3-pieza1.glb; cancion: musica/sala3-pieza1.mp3; tamano: 1.8; movimiento: girar; alcance: 5; colorPedestal: #3a4577; colorTexto: #f3ecdc"></a-entity>
+    <!-- ✏️ Pieza 2: lado izquierdo -->
+    <a-entity position="-5 0 -1"
+      pieza="nombre: Pieza 2; modelo: modelos/sala3-pieza2.glb; cancion: musica/sala3-pieza2.mp3; movimiento: flotar; colorPedestal: #3a4577; colorTexto: #f3ecdc"></a-entity>
+    <!-- ✏️ Pieza 3: lado derecho -->
+    <a-entity position="5 0 -1"
+      pieza="nombre: Pieza 3; modelo: modelos/sala3-pieza3.glb; cancion: musica/sala3-pieza3.mp3; movimiento: latir; colorPedestal: #3a4577; colorTexto: #f3ecdc"></a-entity>
+  </a-entity>
+
+
+  <!-- ░░░░░░░░░░░░░░░░░░ ✏️ PLANTILLA PARA UNA SALA 4 ░░░░░░░░░░░░░░░░░░
+       Todo este bloque está "apagado" porque está dentro de un comentario.
+       Para usarlo:
+         1. Copia las líneas que empiezan con <a-entity ... hasta </a-entity>
+            y pégalas FUERA de este comentario (justo abajo de la Sala 3).
+         2. En la Sala 3 cambia "puertaDer: false" por "puertaDer: true".
+         3. En las otras salas agrega un botón:
+               <a-entity boton-sala="texto: Ir a Sala 4; destino: 48 0 5" position="0 0.8 3"></a-entity>
+         4. Pon los archivos sala4-pieza1, sala4-pieza2 y sala4-pieza3
+            en las carpetas modelos/ y musica/.
+
+  <a-entity sala="nombre: Sala 4; colorPiso: #2e4a2e; colorPared: #dfeccf; puertaDer: false" position="48 0 0">
+    <a-entity boton-sala="texto: Ir a Sala 1; destino: 0 0 5" position="0 1.3 3"></a-entity>
+    <a-entity position="0 0 -5.5" pieza="nombre: Pieza 1; modelo: modelos/sala4-pieza1.glb; cancion: musica/sala4-pieza1.mp3; tamano: 1.8; alcance: 5"></a-entity>
+    <a-entity position="-5 0 -1"  pieza="nombre: Pieza 2; modelo: modelos/sala4-pieza2.glb; cancion: musica/sala4-pieza2.mp3"></a-entity>
+    <a-entity position="5 0 -1"   pieza="nombre: Pieza 3; modelo: modelos/sala4-pieza3.glb; cancion: musica/sala4-pieza3.mp3"></a-entity>
+  </a-entity>
+       ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ -->
+
+
+  <!-- ================================================================
+       CAPA 5: LUCES
+         ambient     = luz pareja que ilumina todo por igual (sin sombras)
+         directional = luz como la del sol, que llega desde una dirección
+       ================================================================ -->
+  <a-entity light="type: ambient; intensity: 0.8"></a-entity>
+  <a-entity light="type: directional; intensity: 0.9" position="4 8 6"></a-entity>
+
+
+  <!-- ================================================================
+       CAPA 6: ENTORNO
+       El cielo que se ve arriba de las salas (las salas no tienen techo).
+       ✏️ Puedes cambiar su color.
+       ================================================================ -->
+  <a-sky color="#1c1b33"></a-sky>
+
+</a-scene>
+
+
+<script>
+  /* =====================================================================
+     ENCENDER LA MÚSICA al presionar "Entrar al museo":
+       1. Despertamos el sistema de audio del navegador (empieza "dormido").
+       2. Le pedimos a cada pieza que toque su canción.
+       3. Escondemos la portada.
+     Todas las canciones suenan al mismo tiempo, pero como cada pieza tiene
+     su "alcance", solo escuchas las que tienes cerca.
+     ===================================================================== */
+  function despertarAudio() {
+    const ctx = THREE.AudioContext.getContext();
+    if (ctx.state !== 'running') ctx.resume();
+  }
+
+  document.getElementById('entrar').addEventListener('click', () => {
+    despertarAudio();
+    // Buscamos todas las etiquetas que tienen el componente "pieza" y les damos play
+    document.querySelectorAll('[pieza]').forEach(el => el.components.pieza.tocar());
+    document.getElementById('portada').style.display = 'none';
+  });
+
+  // Al entrar a VR o AR en el Quest, nos aseguramos de que el audio siga despierto
+  document.querySelector('a-scene').addEventListener('enter-vr', despertarAudio);
+</script>
+
+</body>
+</html>
